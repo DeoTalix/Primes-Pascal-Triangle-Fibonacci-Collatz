@@ -17,7 +17,7 @@ def is_prime(n, primes):
     else:
         raise TypeError(f"'primes' must be list or set.")
 
-def Primes(limit, primes=[2,3,5,7]):
+def Primes_gen(limit, primes=[2,3,5,7]):
     i = primes[-1]
 
     if i >= limit:

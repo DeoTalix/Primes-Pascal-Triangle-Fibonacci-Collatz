@@ -1,5 +1,5 @@
 import os, re
-from .source import Primes
+from .source import Primes_gen
 
 
 
@@ -46,13 +46,11 @@ def save_primes(data:list):
 
     dir_list = os.listdir()
 
-    # If filename exists in the directory promt user for overwrite-action.
     if filename in dir_list:
-        inp = input(f"{filename} already exists. Overwrite? [y/n]\n: ")
-        if inp.lower() == 'n': return
-        if inp.lower() == 'y': pass
+        print(f"{filename} exists already.")
+        return
 
-    max_pfile = get_max_pfile(dir_list)
+    max_pfile = get_max_pfile(dir_list) # str or None
     if max_pfile is not None:
         # If number of primes in max_pfile is greater than length of data, then do not save data.
         if len(data) < get_pfile_num(max_pfile):
@@ -83,5 +81,23 @@ def load_primes():
     return primes
 
 def more_primes(limit):
-    primes = Primes(limit)
+    """Loads primes if any. Generates new ones and saves them each time prime count is divisible by 1000 (to preserve data from accidential loss). If process of generation takes too long, it can be canceled with Ctrl+c, and the generated data will be saved to file."""
+    primes = load_primes()
+
+    primes_gen = Primes_gen(limit, primes)
+    
+    try:
+        while limit > primes[-1]:
+            if len(primes)%1000 == 0:
+                print("limit =", limit, "| max prime =", primes[-1])
+                save_primes(primes)
+            
+            try:
+                next(primes_gen)
+            except StopIteration:
+                break
+    except KeyboardInterrupt:
+        pass
+
     save_primes(primes)
+    return primes

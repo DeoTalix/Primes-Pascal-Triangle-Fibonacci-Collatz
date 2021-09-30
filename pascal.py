@@ -3,17 +3,22 @@ def pascal_triangle(X, Y, oper=lambda a,b: a+b, half=False):
     X: iterable, Y: iterable
     """
     
-    matrix = [[0]*len(X) for i in range(len(Y))]
+    matrix = [[0]]#*len(X) for i in range(len(Y))]
 
-    for i in range(1, len(X)):
-        matrix[0][i] = X[i-1]
+    for i,v in enumerate(X, 1):
+        matrix[0].append(v)
 
-    if half == False:
-        for j in range(1, len(Y)):
-            matrix[j][0] = Y[j-1] 
+    W = len(matrix[0])
 
-    for i in range(1, len(Y)):
-        for j in range(i if half else 1, len(X)):
+    for j,v in enumerate(Y, 1):
+        matrix.append([0] * W)
+        if half == True: v = 0
+        matrix[j][0] = v
+
+    H = len(matrix)
+
+    for i in range(1, H):
+        for j in range(i if half else 1, W):
             if half and i == j:
                 matrix[i][j] = oper(matrix[i-1][j], matrix[i-1][j])
             else:
@@ -21,68 +26,109 @@ def pascal_triangle(X, Y, oper=lambda a,b: a+b, half=False):
 
     return matrix
 
-def print_matrix(M, callback=(lambda cell: cell), format=(lambda cell: cell), sep=' '):
+def output_matrix(M, 
+                 output_cell=(lambda cell: print(cell, end=' ')), 
+                 new_line=print):
+
     for row in M:
         for v in row:
-            v_ = callback(v)
-            print(format(v_), end='')
-        print()
+            output_cell(v)
+        new_line()
 
-def main():
-    from primes.source import Primes, is_prime
-    from primes.utility import save_primes, load_primes
+def default_fill_method(cell):
+    cell = cell % 9 or 9 if cell else 0
+    if cell != 0:
+        val = 255//cell
+    else:
+        val = 0
+    return (val, val, val) # RGB
 
-    #X = [1] * 65#range(1,60)
-    #Y = [1] * 65#range(1,60)
-    #Pt_ones = pascal_triangle(X, Y, half=True)
+def draw_matrix(M, image_name, fill_method=default_fill_method):
+    from PIL import Image, ImageDraw
 
-    if 0:
-        primes = load_primes()
-        max_val = Pt_ones[-1][-1]
-        primes_iter = Primes(max_val, primes)
-        
-        try:
-            while max_val > primes[-1]:
-                if len(primes)%1000 == 0:
-                    print("Pt max_val =", max_val, "| max prime =", primes[-1])
-                    save_primes(primes)
-                
-                try:
-                    next(primes_iter)
-                except StopIteration:
-                    break
-        except KeyboardInterrupt:
-            pass
+    W = len(M[0])
+    H = len(M)
 
-        save_primes(primes)
+    image = Image.new("RGB", (W, H))
+    draw  = ImageDraw.Draw(image)
 
-        prime_set = set(primes)
+    x, y = 0, 0
+    
+    def draw_method(cell):
+        nonlocal x,y
+        draw.point((x,y), fill=fill_method(cell))
+        x += 1
+
+    def new_line():
+        nonlocal x,y
+        x, y = 0, y + 1
+
+    output_matrix(M, output_cell=draw_method, new_line=new_line)
+
+    image.save(image_name)
+
+
+def pascal_primes():
+    from primes.source import Primes_gen, is_prime
+    from primes.utility import save_primes, load_primes, more_primes
+
+    X = Y = [1] * 65
+
+    Pt_ones = pascal_triangle(X, Y, half=True)
+
+    max_val = Pt_ones[-1][-1]
+    primes = more_primes(max_val)
+
+    prime_set = set(primes)
 
     # various callbacks
     prime_dots     = (lambda v: '.' if is_prime(v, prime_set) else ' ')
     mod_nine       = (lambda v: v % 9)
     odd_even       = (lambda v: ('o' if v % 10 in [1, 3, 7, 9] else '.') if v % 2 else ' ')
     prime_mod_nine = (lambda v: '*' if v % 9 in [1, 3, 7, 9] else ' ')
+
+def pascal_serpinski():
+    """Dotted Serpinski Pattern"""
+    X = Y = [1] * 1_000
     
-    # Dotted Serpinski Pattern
-    # print_matrix(Pt_ones, format = (lambda v: " ." if v%2 else '  '), sep='')
+    Pt = pascal_triangle(X, Y, half=False)
+    #method = (lambda v: print(" ." if v%2 else '  ', end=''))
+    #output_matrix(Pt, output_cell = method)
+    draw_matrix(Pt, "pt_serpinski.bmp")
 
-    # X = [1] * 65#range(1,60)
-    # Y = [1] * 65#range(1,60)
-    # Pt_ones = pascal_triangle(X, Y, half= False)
+def pascal_fibonacci():
+    from fibonacci import Fibonacci
 
-    # 3 6 9 pattern
-    # print_matrix(Pt_ones, callback=lambda v: v % 9 or 9 if v % 9 in [3,6,0] else ' ', format=lambda v: f"{v} ")
-
-    X = range(1, 60)
-    Y = range(1, 60)
+    X = Fibonacci(1_000)
+    Y = Fibonacci(1_000)
     
-    Pt_collatz = pascal_triangle(X, Y, oper=lambda a,b: (3*(a+b)+1) if (a+b)%2 else (a+b)//2,)
-    print_matrix(
-        Pt_collatz, 
-        callback=lambda v: v%9 or 9 if v else 0, 
-        format=lambda v: f". " if v!=7 else '  ',
-    ) # A fractal ?
+    Pt = pascal_triangle(X, Y, half=False)
+    #method = (lambda v: print(f"{v % 9 or 9}" if v and v % 9 in [3,6,0] else ' ', end=' '))
+    #output_matrix(Pt_ones, output_cell=method)
+    def method(cell):
+        odd = cell % 2 + 1
+        v = 255 // (((cell % 9 or 9) // odd) or 1)
+        return (v, v, v)
+
+    draw_matrix(Pt, "pt_fibonacci.bmp", fill_method=method)
+
+def pascal_collatz():
+    size = 1_000
+    X = Y = range(1, size)
+    
+    Pt = pascal_triangle(X, Y, oper=( lambda a,b: (3*(a+b)+1) if (a+b)%2 else (a+b)//2 ))
+
+    draw_matrix(Pt, "pt_collatz.bmp")
+
+    
+
+
+
+def main():
+   #pascal_serpinski()
+   pascal_fibonacci()
+   #pascal_collatz()
+
 
 if __name__ == "__main__":
     main()
