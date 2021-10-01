@@ -94,7 +94,13 @@ def pascal_serpinski():
     Pt = pascal_triangle(X, Y, half=False)
     #method = (lambda v: print(" ." if v%2 else '  ', end=''))
     #output_matrix(Pt, output_cell = method)
-    draw_matrix(Pt, "pt_serpinski.bmp")
+    def method(cell):
+        r = 256 // (cell % 9 or 9)
+        g = 256 // (cell % 2 + 1)
+        b = cell % 256
+        return (r, g, b)
+
+    draw_matrix(Pt, "images/pt_serpinski.bmp", fill_method=method)
 
 def pascal_fibonacci():
     from fibonacci import Fibonacci
@@ -106,27 +112,49 @@ def pascal_fibonacci():
     #method = (lambda v: print(f"{v % 9 or 9}" if v and v % 9 in [3,6,0] else ' ', end=' '))
     #output_matrix(Pt_ones, output_cell=method)
     def method(cell):
-        odd = cell % 2 + 1
-        v = 255 // (((cell % 9 or 9) // odd) or 1)
-        return (v, v, v)
+        r = 256 // (cell % 9 or 9)
+        g = 256 // (cell % 2 + 1)
+        b = cell % 256
+        return (r, g, b)
 
-    draw_matrix(Pt, "pt_fibonacci.bmp", fill_method=method)
+    draw_matrix(Pt, "images/pt_fibonacci.bmp", fill_method=method)
 
 def pascal_collatz():
     size = 1_000
+
+    def X_gen(limit, n=1):
+        while limit > 0:
+            yield n
+            n = 3*n+1
+            limit -= 1
+
+    def Y_gen(limit, n=1):
+        while limit > 0:
+            yield n
+            n *= 2
+            limit -= 1
+
+    #X = X_gen(size)
+    #Y = Y_gen(size)
     X = Y = range(1, size)
     
     Pt = pascal_triangle(X, Y, oper=( lambda a,b: (3*(a+b)+1) if (a+b)%2 else (a+b)//2 ))
 
-    draw_matrix(Pt, "pt_collatz.bmp")
+    def method(cell):
+        r = 256 // (cell % 9 or 9)
+        g = 256 // (cell % 2 + 1)
+        b = cell % 256
+        return (r, g, b)
+
+    draw_matrix(Pt, "images/pt_collatz.bmp", fill_method=method)
 
     
 
 
 
 def main():
-   #pascal_serpinski()
-   pascal_fibonacci()
+   pascal_serpinski()
+   #pascal_fibonacci()
    #pascal_collatz()
 
 

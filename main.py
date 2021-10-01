@@ -1,6 +1,5 @@
 
 from primes.utility import load_primes
-from pascal import main as pascal_main
 
 
 
@@ -31,5 +30,8 @@ def main():
     
 
 if __name__ == "__main__":
+    from pascal import main as pascal_main
+    from collatz import main as collatz_main
     #main()
-    pascal_main()
+    #pascal_main()
+    collatz_main()
