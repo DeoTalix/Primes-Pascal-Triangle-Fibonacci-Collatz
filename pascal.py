@@ -1,41 +1,61 @@
-def pascal_triangle(X, Y, oper=lambda a,b: a+b, half=False):
+def pascal_triangle(X, Y, oper=lambda a,b: a+b, symmetrical=True):
     """
-    X: iterable, Y: iterable
+    X and Y: iterables or generators
+
+    Generates matrix with 'X' as x-coordinate, and 'Y' as y-coordinate,
+    and other cells filled with values produced by 'oper' callback
+    where 'a' is a cell of a previous 'i' (row) and current 'j' (column)
+    and 'b' is a cell of a current 'i' (row) and previous 'j' (column).
     """
     
-    matrix = [[0]]#*len(X) for i in range(len(Y))]
+    matrix = [[0]]
 
+    # Builds first row with values from X
     for i,v in enumerate(X, 1):
         matrix[0].append(v)
 
+    # Width of the matrix
     W = len(matrix[0])
 
+    # Builds other rows filled with zeroes
+    # Copies values from Y to the first column
     for j,v in enumerate(Y, 1):
         matrix.append([0] * W)
-        if half == True: v = 0
-        matrix[j][0] = v
 
+    # Height of the matrix
     H = len(matrix)
 
-    for i in range(1, H):
-        for j in range(i if half else 1, W):
-            if half and i == j:
-                matrix[i][j] = oper(matrix[i-1][j], matrix[i-1][j])
-            else:
+    # Fills the rest of the matrix with values produced by oper(a,b) 
+    if symmetrical:
+        for i in range(1, H):
+            for j in range(i, W):
+                if i == j:
+                    # Since matrix is symmetrical on the diagonal
+                    # apply oper(a, a) when i and j are the same.
+                    matrix[i][j] = oper(matrix[i-1][j], matrix[i-1][j])
+                else:
+                    matrix[i][j] = oper(matrix[i-1][j], matrix[i][j-1])
+                    matrix[j][i] = matrix[i][j]
+    else:
+        for i in range(1, H):
+            for j in range(1, W):
+                # Since matrix is not symmetrical calculate every cell.
                 matrix[i][j] = oper(matrix[i-1][j], matrix[i][j-1])
 
     return matrix
 
-def output_matrix(M, 
-                 output_cell=(lambda cell: print(cell, end=' ')), 
-                 new_line=print):
-
-    for row in M:
-        for v in row:
-            output_cell(v)
-        new_line()
+def output_matrix(M, output_cell=(lambda cell,x,y: print(cell, end=' ')), 
+                     new_line=(lambda cell,x,y: print())):
+    """Iterates through the matrix, and applies the output_cell callback to each cell. 
+    Use the new_line callback to control the transition to the next row."""
+    
+    for y,row in enumerate(M):
+        for x,v in enumerate(row):
+            output_cell(v, x, y)
+        new_line(v, x, y)
 
 def default_fill_method(cell):
+    """Default callback for the draw_matrix fill_method"""
     cell = cell % 9 or 9 if cell else 0
     if cell != 0:
         val = 255//cell
@@ -44,6 +64,7 @@ def default_fill_method(cell):
     return (val, val, val) # RGB
 
 def draw_matrix(M, image_name, fill_method=default_fill_method):
+    """Outputs matrix in an image file."""
     from PIL import Image, ImageDraw
 
     W = len(M[0])
@@ -51,75 +72,50 @@ def draw_matrix(M, image_name, fill_method=default_fill_method):
 
     image = Image.new("RGB", (W, H))
     draw  = ImageDraw.Draw(image)
+  
+    def draw_method(cell, x, y):
+        draw.point((x,y), fill=fill_method(cell, x, y))
 
-    x, y = 0, 0
-    
-    def draw_method(cell):
-        nonlocal x,y
-        draw.point((x,y), fill=fill_method(cell))
-        x += 1
-
-    def new_line():
-        nonlocal x,y
-        x, y = 0, y + 1
-
-    output_matrix(M, output_cell=draw_method, new_line=new_line)
+    output_matrix(M, output_cell=draw_method, new_line=(lambda *a: None))
 
     image.save(image_name)
+    print(f"Image saved to {image_name}")
 
-
-def pascal_primes():
-    from primes.source import Primes_gen, is_prime
-    from primes.utility import save_primes, load_primes, more_primes
-
-    X = Y = [1] * 65
-
-    Pt_ones = pascal_triangle(X, Y, half=True)
-
-    max_val = Pt_ones[-1][-1]
-    primes = more_primes(max_val)
-
-    prime_set = set(primes)
-
-    # various callbacks
-    prime_dots     = (lambda v: '.' if is_prime(v, prime_set) else ' ')
-    mod_nine       = (lambda v: v % 9)
-    odd_even       = (lambda v: ('o' if v % 10 in [1, 3, 7, 9] else '.') if v % 2 else ' ')
-    prime_mod_nine = (lambda v: '*' if v % 9 in [1, 3, 7, 9] else ' ')
-
-def pascal_serpinski():
-    """Dotted Serpinski Pattern"""
+def pt_serpinski():
+    """Serpinski Pattern in Pascal Triangle."""
     X = Y = [1] * 1_000
     
-    Pt = pascal_triangle(X, Y, half=False)
+    Pt = pascal_triangle(X, Y)
     #method = (lambda v: print(" ." if v%2 else '  ', end=''))
     #output_matrix(Pt, output_cell = method)
-    def method(cell):
-        r = 256 // (cell % 9 or 9)
-        g = 256 // (cell % 2 + 1)
-        b = cell % 256
+    def method(cell, x, y):
+        #r = 256 // (cell % 9 or 9)
+        r = 255 * (cell % 2 == 0)
+        g = 255 * (cell % 2 != 0)
+        b = round(y / 1_000 * r)
         return (r, g, b)
 
     draw_matrix(Pt, "images/pt_serpinski.bmp", fill_method=method)
 
-def pascal_fibonacci():
-    from fibonacci import Fibonacci
+def pt_fibonacci():
+    """Pascal Triangle with x and y coordinates as a Fibonacci sequence."""
+    from fibonacci import Fibonacci_gen
 
-    X = Fibonacci(1_000)
-    Y = Fibonacci(1_000)
+    X = Fibonacci_gen(1_000)
+    Y = Fibonacci_gen(1_000)
     
-    Pt = pascal_triangle(X, Y, half=False)
+    Pt = pascal_triangle(X, Y)
     #method = (lambda v: print(f"{v % 9 or 9}" if v and v % 9 in [3,6,0] else ' ', end=' '))
     #output_matrix(Pt_ones, output_cell=method)
-    def method(cell):
+    def method(cell, x, y):
         r = 256 // (cell % 9 or 9)
         g = 256 // (cell % 2 + 1)
-        b = cell % 256
+        b = round(y / 1_000 * 255)
         return (r, g, b)
 
     draw_matrix(Pt, "images/pt_fibonacci.bmp", fill_method=method)
 
-def pascal_collatz():
+def pt_collatz():
     size = 1_000
 
     def X_gen(limit, n=1):
@@ -136,27 +132,15 @@ def pascal_collatz():
 
     #X = X_gen(size)
     #Y = Y_gen(size)
-    X = Y = range(1, size)
+    X = range(1, size)
+    Y = range(1, size)
     
     Pt = pascal_triangle(X, Y, oper=( lambda a,b: (3*(a+b)+1) if (a+b)%2 else (a+b)//2 ))
 
-    def method(cell):
+    def method(cell, x, y):
         r = 256 // (cell % 9 or 9)
         g = 256 // (cell % 2 + 1)
-        b = cell % 256
+        b = round(y / 1_000 * 255)
         return (r, g, b)
 
     draw_matrix(Pt, "images/pt_collatz.bmp", fill_method=method)
-
-    
-
-
-
-def main():
-   pascal_serpinski()
-   #pascal_fibonacci()
-   #pascal_collatz()
-
-
-if __name__ == "__main__":
-    main()
